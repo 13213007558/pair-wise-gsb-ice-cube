@@ -156,6 +156,37 @@ IceCube::Schedule.from_ical(ical)
 
 ---
 
+## Inferring a schedule from history
+
+Given a complete observation window and the dates that actually occurred,
+ice_cube can propose bounded, ranked recurrence explanations. Each candidate
+includes a ready-to-use schedule, its cost, extra `RDATE`s, exception
+`EXDATE`s, unexplained observed dates, and extra dates predicted in the
+window. Dates outside the observation window are not treated as evidence of
+absence.
+
+```ruby
+result = IceCube.infer_schedule(
+  window,
+  observed_dates,
+  rule_cost: ->(rule) { IceCube::ScheduleInference.complexity(rule) },
+  rdate_cost: 3,
+  exdate_cost: 3,
+  max_interval: 12,
+  max_candidates: 128
+)
+
+best = result.best
+best.rule   # the proposed RRULE, or nil when individual RDATEs win
+best.cost   # rule complexity plus extra RDATE/EXDATE costs
+best.schedule.occurrences_between(window.begin, window.end)
+```
+
+Equally good explanations remain in `result.candidates` in a deterministic
+order. The first fitting candidate is not assumed to be the only answer.
+
+---
+
 ## Using your words
 
 ice_cube can provide ical or string representations of individual rules, or the
