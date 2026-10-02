@@ -1,17 +1,30 @@
 module IceCube
   module Validations::YearlyInterval
-    def interval(interval)
+    def interval(interval, week_start = nil)
       @interval = normalized_interval(interval)
-      replace_validations_for(:interval, [Validation.new(@interval)])
+      @week_start = if week_start
+        TimeUtil.wday_to_sym(week_start)
+      elsif instance_variable_defined?(:@week_start)
+        @week_start
+      else
+        :monday
+      end
+      replace_validations_for(:interval, [Validation.new(@interval, @week_start, by_week_no?)])
       clobber_base_validations(:year)
       self
     end
 
-    class Validation
-      attr_reader :interval
+    def by_week_no?
+      !validations[:week_of_year].nil?
+    end
 
-      def initialize(interval)
+    class Validation
+      attr_reader :interval, :week_start
+
+      def initialize(interval, week_start = :monday, week_numbered = false)
         @interval = interval
+        @week_start = week_start
+        @week_numbered = week_numbered
       end
 
       def type
@@ -34,6 +47,7 @@ module IceCube
 
       def build_hash(builder)
         builder[:interval] = interval
+        builder[:week_start] = TimeUtil.sym_to_wday(week_start) if @week_numbered
       end
 
       def build_ical(builder)
@@ -41,6 +55,7 @@ module IceCube
         unless interval == 1
           builder["INTERVAL"] << interval
         end
+        builder["WKST"] << week_start.to_s.upcase[0..1] if @week_numbered && week_start != :monday
       end
     end
   end

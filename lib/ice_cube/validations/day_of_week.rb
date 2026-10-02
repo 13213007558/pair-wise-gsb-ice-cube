@@ -4,6 +4,7 @@ module IceCube
       dows.each do |day, occs|
         occs.each do |occ|
           day = TimeUtil.sym_to_wday(day)
+          raise ArgumentError, "Numbered BYDAY cannot be combined with BYWEEKNO" if occ != 0 && validations[:week_of_year]
           validations_for(:day_of_week) << Validation.new(day, occ)
         end
       end

@@ -36,7 +36,7 @@ module IceCube
       def validate(step_time, start_time)
         # Compute the interval bounds and build a filtered schedule that preserves
         # implicit anchors while avoiding BYSETPOS/COUNT/UNTIL truncation.
-        start_of_year, end_of_year = Validations::BySetPosHelper.interval_bounds(:year, step_time)
+        start_of_year, end_of_year = Validations::BySetPosHelper.year_bounds(step_time, rule)
         new_schedule = Validations::BySetPosHelper.build_filtered_schedule(rule, start_time, start_of_year)
 
         # Build the full candidate set for this interval, then map the selected

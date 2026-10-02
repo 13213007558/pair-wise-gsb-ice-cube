@@ -125,5 +125,12 @@ module IceCube
         end
       end
     end
+
+    describe "creating yearly rule with week numbers" do
+      it "round-trips week numbers, weekdays, and week start" do
+        rule = Rule.yearly.week_of_year(1, 53, week_start: :sunday).day(:monday)
+        expect(Rule.from_hash(rule.to_hash)).to eq(rule)
+      end
+    end
   end
 end

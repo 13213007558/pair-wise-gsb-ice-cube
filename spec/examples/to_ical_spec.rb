@@ -59,6 +59,11 @@ describe IceCube, "to_ical" do
     expect(rule.to_ical).to eq("FREQ=YEARLY;BYYEARDAY=100,200")
   end
 
+  it "should be able to serialize a .week_of_year rule to_ical" do
+    rule = IceCube::Rule.yearly.week_of_year(1, -53, week_start: :sunday).day(:monday, :wednesday)
+    expect(rule.to_ical).to eq("FREQ=YEARLY;WKST=SU;BYWEEKNO=1,-53;BYDAY=MO,WE")
+  end
+
   it "should be able to serialize a .month_of_year rule to_ical" do
     rule = IceCube::Rule.daily.month_of_year(:january, :april)
     expect(rule.to_ical).to eq("FREQ=DAILY;BYMONTH=1,4")

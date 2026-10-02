@@ -2,6 +2,25 @@ module IceCube
   module Validations::BySetPosHelper
     module_function
 
+    def year_bounds(step_time, rule)
+      week_validation = Array(rule.validations[:week_of_year]).first
+      return interval_bounds(:year, step_time) unless week_validation
+
+      week_start = week_validation.week_start
+      week_year = Validations::WeekOfYear.week_year_for_interval(step_time.to_date, week_start)
+      first_week_start = Validations::WeekOfYear.first_week_start(week_year, week_start)
+      last_week_end = Validations::WeekOfYear.first_week_start(week_year + 1, week_start) - 1
+
+      [
+        TimeUtil.build_in_zone(
+          [first_week_start.year, first_week_start.month, first_week_start.day, 0, 0, 0], step_time
+        ),
+        TimeUtil.build_in_zone(
+          [last_week_end.year, last_week_end.month, last_week_end.day, 23, 59, 59], step_time
+        )
+      ]
+    end
+
     def interval_bounds(interval_type, step_time, week_start: nil)
       case interval_type
       when :year
@@ -97,6 +116,8 @@ module IceCube
           delta = (start_time.wday - interval_start.wday) % 7
           interval_start.to_date + delta
         end
+      elsif v[:week_of_year]
+        interval_start.to_date
       elsif expands_day
         # Day expansion: use interval_start's full date
         interval_start.to_date
@@ -121,14 +142,16 @@ module IceCube
       # Preserve sub-second precision from DTSTART to ensure occurrences.index(step_time)
       # can find exact matches when DTSTART has fractional seconds.
       sec_with_subsec = sec + TimeUtil.subsec(start_time)
+      filtered_rule = IceCube::Rule.from_hash(filtered_hash)
 
-      schedule_start = TimeUtil.build_in_zone(
+      unaligned_start = TimeUtil.build_in_zone(
         [anchor_date.year, anchor_date.month, anchor_date.day, hour, min, sec_with_subsec],
         start_time
       )
+      schedule_start = unaligned_start
 
       IceCube::Schedule.new(schedule_start) do |s|
-        s.add_recurrence_rule(IceCube::Rule.from_hash(filtered_hash))
+        s.add_recurrence_rule(filtered_rule)
       end
     end
   end

@@ -78,9 +78,20 @@ module IceCube
 
         rule = IceCube::Rule.send(interval_type, hash[:interval] || 1)
 
-        rule.interval(hash[:interval] || 1, TimeUtil.wday_to_sym(hash[:week_start] || 0)) if rule.is_a? WeeklyRule
+        if rule.is_a?(WeeklyRule)
+          rule.interval(hash[:interval] || 1, TimeUtil.wday_to_sym(hash[:week_start] || 0))
+        elsif rule.is_a?(YearlyRule)
+          rule.interval(hash[:interval] || 1, hash.key?(:week_start) ? TimeUtil.wday_to_sym(hash[:week_start]) : :monday)
+        end
         rule.until(TimeUtil.deserialize_time(hash[:until])) if hash[:until]
         rule.count(hash[:count]) if hash[:count]
+
+        if hash[:validations]&.key?(:week_of_year) && !rule.is_a?(YearlyRule)
+          raise ArgumentError, "BYWEEKNO can only be used with FREQ=YEARLY"
+        end
+        if hash[:validations]&.key?(:week_of_year) && hash[:validations]&.key?(:day_of_week)
+          raise ArgumentError, "Numbered BYDAY cannot be combined with BYWEEKNO"
+        end
 
         hash[:validations]&.each do |name, args|
           apply_validation(rule, name, args)

@@ -5,6 +5,7 @@ module IceCube
         unless day.is_a?(Integer)
           raise ArgumentError, "expecting Integer value for day, got #{day.inspect}"
         end
+        raise ArgumentError, "BYMONTHDAY cannot be combined with BYWEEKNO" if validations[:week_of_year]
         verify_alignment(day, :day, :day_of_month) { |error| raise error }
         validations_for(:day_of_month) << Validation.new(day)
       end

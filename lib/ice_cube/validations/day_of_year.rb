@@ -5,6 +5,7 @@ module IceCube
         unless day.is_a?(Integer)
           raise ArgumentError, "expecting Integer value for day, got #{day.inspect}"
         end
+        raise ArgumentError, "BYYEARDAY cannot be combined with BYWEEKNO" if validations[:week_of_year]
         validations_for(:day_of_year) << Validation.new(day)
       end
       clobber_base_validations(:month, :day, :wday)

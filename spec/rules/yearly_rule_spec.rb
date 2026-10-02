@@ -94,4 +94,99 @@ describe IceCube::YearlyRule do
       Time.utc(2014, 12, 31)]
     expect(schedule.occurrences(Time.utc(2014, 12, 31))).to eq days_of_year
   end
+
+  describe "week_of_year" do
+    it "expands the first ISO week even when it starts in the previous year" do
+      schedule = IceCube::Schedule.new(Time.utc(2018, 12, 20, 9)) do |s|
+        s.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1).day(:monday, :wednesday)
+      end
+
+      expect(schedule.first(4)).to eq([
+        Time.utc(2018, 12, 31, 9),
+        Time.utc(2019, 1, 2, 9),
+        Time.utc(2019, 12, 30, 9),
+        Time.utc(2020, 1, 1, 9)
+      ])
+    end
+
+    it "expands every day in the first week when no BYDAY is given" do
+      schedule = IceCube::Schedule.new(Time.utc(2018, 12, 27, 9)) do |s|
+        s.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1)
+      end
+
+      expect(schedule.first(7).map(&:to_date)).to eq((
+        Date.new(2018, 12, 31)..Date.new(2019, 1, 6)
+      ).to_a)
+    end
+
+    it "skips week 53 in years without 53 weeks and supports negative week numbers" do
+      week53 = IceCube::Schedule.new(Time.utc(2018, 1, 1)) do |s|
+        s.add_recurrence_rule IceCube::Rule.yearly.week_of_year(53).day(:monday)
+      end
+      last_week = IceCube::Schedule.new(Time.utc(2018, 1, 1)) do |s|
+        s.add_recurrence_rule IceCube::Rule.yearly.week_of_year(-1).day(:sunday)
+      end
+
+      expect(week53.first(3).map(&:to_date)).to eq([
+        Date.new(2020, 12, 28),
+        Date.new(2026, 12, 28),
+        Date.new(2032, 12, 27)
+      ])
+      expect(last_week.first(3).map(&:to_date)).to eq([
+        Date.new(2018, 12, 30),
+        Date.new(2019, 12, 29),
+        Date.new(2021, 1, 3)
+      ])
+    end
+
+    it "uses WKST to determine whether a week has at least four days in the year" do
+      schedule = IceCube::Schedule.new(Time.utc(2018, 12, 15)) do |s|
+        s.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1, week_start: :wednesday).day(:monday)
+      end
+
+      expect(schedule.first(3).map(&:to_date)).to eq([
+        Date.new(2019, 1, 7),
+        Date.new(2020, 1, 6),
+        Date.new(2021, 1, 4)
+      ])
+    end
+
+    it "applies BYSETPOS within the cross-year week before COUNT and UNTIL" do
+      count_schedule = IceCube::Schedule.new(Time.utc(2018, 12, 20)) do |s|
+        s.add_recurrence_rule(
+          IceCube::Rule.yearly.week_of_year(1).day(:monday, :wednesday).by_set_pos(-1).count(3)
+        )
+      end
+      until_schedule = IceCube::Schedule.new(Time.utc(2018, 12, 20)) do |s|
+        s.add_recurrence_rule(
+          IceCube::Rule.yearly.week_of_year(1).day(:monday, :wednesday).by_set_pos(1).until(Time.utc(2020, 1, 1))
+        )
+      end
+
+      expect(count_schedule.first(3).map(&:to_date)).to eq([
+        Date.new(2019, 1, 2),
+        Date.new(2020, 1, 1),
+        Date.new(2021, 1, 6)
+      ])
+      expect(until_schedule.occurrences(Time.utc(2022, 1, 1)).map(&:to_date)).to eq([
+        Date.new(2018, 12, 31),
+        Date.new(2019, 12, 30)
+      ])
+    end
+
+    it "rejects invalid week numbers and incompatible recurrence parts" do
+      expect { IceCube::Rule.yearly.week_of_year(0) }
+        .to raise_error(ArgumentError, /Expecting week number/)
+      expect { IceCube::Rule.yearly.week_of_year(54) }
+        .to raise_error(ArgumentError, /Expecting week number/)
+      expect { IceCube::Rule.yearly.day_of_year(1).week_of_year(1) }
+        .to raise_error(ArgumentError, /BYYEARDAY/)
+      expect { IceCube::Rule.yearly.day_of_month(1).week_of_year(1) }
+        .to raise_error(ArgumentError, /BYMONTHDAY/)
+      expect { IceCube::Rule.yearly.day_of_week(monday: [1]).week_of_year(1) }
+        .to raise_error(ArgumentError, /numbered BYDAY/)
+      expect { IceCube::Rule.from_ical("FREQ=WEEKLY;BYWEEKNO=1") }
+        .to raise_error(ArgumentError, /FREQ=YEARLY/)
+    end
+  end
 end

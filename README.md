@@ -240,6 +240,16 @@ schedule.add_recurrence_rule IceCube::Rule.yearly.day_of_year(100, -100)
 schedule.add_recurrence_rule IceCube::Rule.yearly(4).day_of_year(-1)
 ```
 
+### Yearly (by week of year)
+
+```ruby
+# ISO week 1 on Monday and Wednesday (the first week can start in December)
+schedule.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1).day(:monday, :wednesday)
+
+# weeks follow the specified WKST, and negative numbers count from the last week
+schedule.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1, -1, week_start: :sunday)
+```
+
 ### Yearly (by month of year)
 
 ```ruby
