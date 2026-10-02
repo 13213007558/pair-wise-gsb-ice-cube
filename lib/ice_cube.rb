@@ -12,6 +12,8 @@ module IceCube
   autoload :Rule, "ice_cube/rule"
   autoload :Schedule, "ice_cube/schedule"
   autoload :Occurrence, "ice_cube/occurrence"
+  autoload :CalendarDuration, "ice_cube/calendar_duration"
+  autoload :InvalidLocalTimeError, "ice_cube/calendar_duration"
 
   autoload :IcalBuilder, "ice_cube/builders/ical_builder"
   autoload :HashBuilder, "ice_cube/builders/hash_builder"

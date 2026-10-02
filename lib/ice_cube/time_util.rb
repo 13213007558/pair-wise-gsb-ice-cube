@@ -36,7 +36,7 @@ module IceCube
       elsif reference.zone
         Time.local(*args)
       else
-        Time.new(*args << reference.utc_offset)
+        Time.new(*args, reference.utc_offset)
       end
     end
 
@@ -79,6 +79,23 @@ module IceCube
       when Date then date
       else
         Date.new(date.year, date.month, date.day)
+      end
+    end
+
+    # Normalize a duration option: Numbers stay elapsed seconds, calendar
+    # durations and ActiveSupport::Duration values become CalendarDuration.
+    def self.coerce_duration(value)
+      case value
+      when nil, Numeric, IceCube::CalendarDuration
+        value
+      when String
+        IceCube::CalendarDuration.parse(value)
+      else
+        if defined?(ActiveSupport::Duration) && value.is_a?(ActiveSupport::Duration)
+          IceCube::CalendarDuration.from_active_support(value)
+        else
+          raise ArgumentError, "invalid duration: #{value.inspect}"
+        end
       end
     end
 
@@ -262,6 +279,121 @@ module IceCube
         0.0
       end
     end
+
+    # Human readable zone name for error messages
+    def self.zone_name(time)
+      if time.respond_to?(:time_zone)
+        time.time_zone.name
+      else
+        time.zone || "UTC#{time.utc_offset}"
+      end
+    end
+
+    # Resolve a wall-clock time that may not exist (spring-forward gap) or
+    # exist twice (fall-back overlap) using the given policies. See
+    # CalendarDuration for the available policies.
+    #
+    # +wall+ is either a wall-clock time built in the target zone, or an
+    # array of [year, month, day, hour, min, sec] plus a reference time for
+    # the zone.
+    def self.resolve_local(wall, nonexistent_policy, ambiguous_policy, reference = nil)
+      time, components =
+        if wall.is_a?(Array)
+          reference = build_in_zone(wall, reference) unless reference
+          [reference, wall]
+        else
+          [wall, same_wall_args(wall)]
+        end
+      if time.respond_to?(:time_zone)
+        resolve_in_time_zone(time, components, nonexistent_policy, ambiguous_policy)
+      elsif time.zone.nil? || time.utc?
+        time
+      else
+        resolve_plain_time(time, components, nonexistent_policy, ambiguous_policy)
+      end
+    end
+
+    def self.resolve_in_time_zone(time, components, nonexistent_policy, ambiguous_policy)
+      tzinfo = time.time_zone.tzinfo
+      wall = Time.utc(*components)
+      periods = tzinfo.periods_for_local(wall)
+      return time if periods.length == 1
+      if periods.empty?
+        raise IceCube::InvalidLocalTimeError.new(time, :nonexistent) if nonexistent_policy == :raise
+        after = tzinfo.period_for_utc(wall + 86_400)
+        gap_end = after.start_transition.at.to_time.utc
+        before = tzinfo.period_for_utc(wall - 1)
+        gap_start = gap_end - (after.utc_total_offset - before.utc_total_offset)
+        utc = nonexistent_policy == :forward ? gap_end : gap_start
+        match_zone(utc, time)
+      else
+        raise IceCube::InvalidLocalTimeError.new(time, :ambiguous) if ambiguous_policy == :raise
+        period = ambiguous_policy == :earlier ? periods.first : periods.last
+        match_zone(wall - period.utc_total_offset, time)
+      end
+    end
+    private_class_method :resolve_in_time_zone
+
+    # Plain Ruby Time: Time.local silently shifts a nonexistent wall time
+    # forward and picks the earlier side of an overlap. Rebuild the wall
+    # clocks one hour on either side to detect the two situations.
+    def self.resolve_plain_time(time, components, nonexistent_policy, ambiguous_policy)
+      reference = build_in_zone(components, time)
+      unless same_wall_args(reference) == components
+        raise IceCube::InvalidLocalTimeError.new(time, :nonexistent) if nonexistent_policy == :raise
+        gap_length = reference - Time.new(*components, reference.utc_offset)
+        return reference if nonexistent_policy == :forward
+        return reference - gap_length
+      end
+      overlap = local_overlap(reference, components)
+      if overlap
+        raise IceCube::InvalidLocalTimeError.new(time, :ambiguous) if ambiguous_policy == :raise
+        earlier, later = [reference, overlap].minmax
+        return ambiguous_policy == :earlier ? earlier : later
+      end
+      reference
+    end
+    private_class_method :resolve_plain_time
+
+    # Detect an overlap for plain Ruby Time and return the other occurrence
+    # (Time.local at a repeated wall clock silently picks one side). The
+    # other occurrence is the same wall clock at a different UTC offset that
+    # is genuinely observed there. To distinguish that from a nearby gap,
+    # verify the wall clocks one delta on each side exist under the probed
+    # offset. Minute deltas cover half-hour DST changes (Lord Howe).
+    def self.local_overlap(reference, components)
+      1.upto(60) do |minutes|
+        delta = minutes * ONE_MINUTE
+        [reference.utc_offset - delta, reference.utc_offset + delta].each do |offset|
+          candidate = Time.new(*components, offset)
+          next unless same_wall_args(candidate) == components
+          next unless candidate != reference && (candidate - reference).abs == delta
+          next unless local_offset_in_effect?(candidate)
+          surrounding = [-delta, delta].all? do |shift|
+            adjacent = candidate + shift
+            built = build_in_zone(same_wall_args(adjacent), candidate)
+            built.utc_offset == offset && same_wall_args(built) == same_wall_args(adjacent)
+          end
+          return candidate if surrounding
+        end
+      end
+      nil
+    end
+    private_class_method :local_overlap
+
+    # True when the candidate's fixed UTC offset is actually observed in the
+    # system zone at its UTC instant
+    def self.local_offset_in_effect?(candidate)
+      observed = Time.at(candidate.to_i)
+      observed.utc_offset == candidate.utc_offset &&
+        same_wall_args(observed) == same_wall_args(candidate)
+    end
+    private_class_method :local_offset_in_effect?
+
+    def self.same_wall_args(time)
+      [time.year, time.month, time.day, time.hour, time.min, time.sec]
+    end
+    private_class_method :same_wall_args
 
     # A utility class for safely moving time around
     class TimeWrapper

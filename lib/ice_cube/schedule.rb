@@ -15,7 +15,7 @@ module IceCube
     # Create a new schedule
     def initialize(start_time = nil, options = {})
       self.start_time = start_time || TimeUtil.now
-      self.end_time = self.start_time + options[:duration] if options[:duration]
+      self.duration = options[:duration] if options[:duration]
       self.end_time = options[:end_time] if options[:end_time]
       @all_recurrence_rules = []
       @all_exception_rules = []
@@ -31,15 +31,53 @@ module IceCube
     # Set end_time
     def end_time=(end_time)
       @end_time = TimeUtil.ensure_time end_time
+      @fixed_duration = nil
+      @calendar_duration = nil
     end
     deprecated_alias :end_date=, :end_time=
 
+    # A CalendarDuration (calendar units) or the number of elapsed seconds
+    # between start_time and end_time. Numeric durations are fixed elapsed
+    # time; every occurrence gets the same number of seconds. Calendar
+    # durations advance the local clock for each occurrence independently.
     def duration
-      end_time ? end_time - start_time : 0
+      @calendar_duration || (end_time ? end_time - start_time : 0)
     end
 
-    def duration=(seconds)
-      @end_time = start_time + seconds
+    # The calendar duration, if one was set (nil otherwise)
+    def calendar_duration
+      @calendar_duration
+    end
+
+    # Accepts a Numeric (elapsed seconds), an IceCube::CalendarDuration or
+    # an ActiveSupport::Duration
+    def duration=(value)
+      duration = TimeUtil.coerce_duration(value)
+      @calendar_duration = duration.is_a?(IceCube::CalendarDuration) ? duration : nil
+      @fixed_duration = duration.is_a?(Numeric) ? duration : nil
+      @end_time = end_time_for(start_time)
+    end
+
+    # Actual end time for an occurrence starting at +time+, applying the
+    # calendar duration (if any) from that occurrence's own start time
+    def end_time_for(time)
+      if @calendar_duration
+        @calendar_duration.apply_to(time)
+      elsif @fixed_duration
+        time + @fixed_duration
+      elsif end_time
+        time + (end_time - start_time)
+      else
+        time
+      end
+    end
+
+    def duration?
+      if @calendar_duration
+        !@calendar_duration.zero?
+      else
+        !end_time.nil? && end_time != start_time
+      end
     end
 
     # Add a recurrence time to the schedule
@@ -240,12 +278,17 @@ module IceCube
     # Determine if the schedule is occurring at a given time
     def occurring_at?(time)
       time = TimeUtil.match_zone(time, start_time) or raise ArgumentError, "Time required, got #{time.inspect}"
-      if duration > 0
-        return false if exception_time?(time)
-        occurs_between?(time - duration + 1, time)
-      else
-        occurs_at?(time)
+      return occurs_at?(time) unless duration?
+      return false if exception_time?(time)
+      reset
+      time += TimeUtil.subsec(start_time) - TimeUtil.subsec(time)
+      t1 = full_required? ? start_time : time - max_duration_seconds
+      t1 = start_time if t1 < start_time
+      while (occurrence = next_time(t1, time))
+        return true if occurrence.start_time <= time && occurrence.end_time > time
+        t1 = occurrence + 1
       end
+      false
     end
 
     # Determine if this schedule conflicts with another schedule
@@ -278,7 +321,7 @@ module IceCube
       # Due to durations, we need to walk up to the end time, and verify in the
       # other direction
       if last_time
-        last_time += terminating_schedule.duration
+        last_time += terminating_schedule.send(:max_duration_seconds)
         other_schedule.each_occurrence do |time|
           break if time > last_time
           return true if terminating_schedule.occurring_at?(time)
@@ -329,7 +372,11 @@ module IceCube
       pieces.concat exception_rules.map { |r| "EXRULE:#{r.to_ical}" }
       pieces.concat recurrence_times_without_start_time.map { |t| "RDATE#{IcalBuilder.ical_format(t, force_utc)}" }
       pieces.concat exception_times.map { |t| "EXDATE#{IcalBuilder.ical_format(t, force_utc)}" }
-      pieces << "DTEND#{IcalBuilder.ical_format(end_time, force_utc)}" if end_time
+      if @calendar_duration
+        pieces << "DURATION:#{@calendar_duration.to_ical}"
+      elsif end_time
+        pieces << "DTEND#{IcalBuilder.ical_format(end_time, force_utc)}"
+      end
       pieces.join("\n")
     end
 
@@ -357,6 +404,7 @@ module IceCube
       data[:start_time] = TimeUtil.serialize_time(start_time)
       data[:start_date] = data[:start_time] if IceCube.compatibility <= 11
       data[:end_time] = TimeUtil.serialize_time(end_time) if end_time
+      data[:duration] = duration_to_hash
       data[:rrules] = recurrence_rules.map(&:to_hash)
       data[:exrules] = exception_rules.map(&:to_hash) if exception_rules.any?
       data[:rtimes] = recurrence_times.map do |rt|
@@ -385,7 +433,7 @@ module IceCube
 
     def hash
       [
-        TimeUtil.hash(start_time), duration,
+        TimeUtil.hash(start_time), @calendar_duration || duration,
         *@all_recurrence_rules.map(&:hash).sort!,
         *@all_exception_rules.map(&:hash).sort!
       ].hash
@@ -414,6 +462,32 @@ module IceCube
       @all_exception_rules.each(&:reset)
     end
 
+    # Upper bound on the elapsed length of any occurrence. Used to look
+    # backwards for occurrences whose start is before a window but whose
+    # end reaches into it. Calendar days can be 23 or 25 hours around DST.
+    def max_duration_seconds
+      if @calendar_duration
+        days = @calendar_duration.weeks * 7 + @calendar_duration.days
+        days * IceCube::ONE_DAY + IceCube::ONE_HOUR + @calendar_duration.clock_seconds
+      else
+        duration
+      end
+    end
+
+    def occurrence_end_for(occurrence)
+      end_time_for(occurrence.is_a?(Occurrence) ? occurrence.start_time : occurrence)
+    end
+
+    def duration_to_hash
+      if @calendar_duration
+        @calendar_duration.to_hash
+      elsif end_time
+        end_time - start_time
+      else
+        0
+      end
+    end
+
     # Find all of the occurrences for the schedule between opening_time
     # and closing_time
     # Iteration is unrolled in pairs to skip duplicate times in end of DST
@@ -422,16 +496,17 @@ module IceCube
       closing_time = TimeUtil.match_zone(closing_time, start_time)
       opening_time += TimeUtil.subsec(start_time) - TimeUtil.subsec(opening_time)
       opening_time = start_time if opening_time < start_time
-      spans = options[:spans] == true && duration != 0
+      spans = options[:spans] == true && duration?
       Enumerator.new do |yielder|
         reset
         t1 = full_required? ? start_time : opening_time
-        t1 -= duration if spans
+        t1 -= max_duration_seconds if spans
         t1 = start_time if t1 < start_time
         loop do
           break unless (t0 = next_time(t1, closing_time))
           break if closing_time && t0 > closing_time
-          if spans ? (t0.end_time > opening_time) : (t0 >= opening_time)
+          after_opening = spans ? occurrence_end_for(t0) > opening_time : t0 >= opening_time
+          if after_opening
             yielder << (block_given? ? yield(t0) : t0)
           end
           t1 = t0 + 1
@@ -459,7 +534,7 @@ module IceCube
           rule.increment_uses if candidate == min_time && rule.respond_to?(:increment_uses)
         end
         next (time = min_time + 1) if exception_time?(min_time)
-        break Occurrence.new(min_time, min_time + duration)
+        break Occurrence.new(min_time, end_time_for(min_time))
       end
     end
 

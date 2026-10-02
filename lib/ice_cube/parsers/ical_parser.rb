@@ -28,7 +28,7 @@ module IceCube
           data[:extimes] ||= []
           data[:extimes] += value.split(",").map { |v| TimeUtil.deserialize_time(v) }
         when "DURATION"
-          data[:duration] # FIXME
+          data[:duration] = value
         when "RRULE"
           data[:rrules] ||= []
           data[:rrules] += [rule_from_ical(value)]

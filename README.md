@@ -106,6 +106,21 @@ schedule.add_recurrence_rule IceCube::Rule.daily
 schedule.occurring_at?(start + 3599) # true
 schedule.occurring_at?(start + 3600) # false
 
+# a numeric duration is always elapsed seconds
+schedule = IceCube::Schedule.new(start, duration: 24 * 3600)
+
+# a calendar duration advances the local clock, so "one day" differs from
+# "24 hours" on a DST transition (23 or 25 elapsed hours that day)
+require "ice_cube/calendar_duration"
+day = IceCube::Schedule.new(start, duration: IceCube::CalendarDuration.new(days: 1))
+hours = IceCube::Schedule.new(start, duration: IceCube::CalendarDuration.new(hours: 24))
+
+# when an end lands on a nonexistent (spring-forward) or repeated
+# (fall-back) local time, choose an explicit policy:
+IceCube::CalendarDuration.new(days: 1, nonexistent: :forward, ambiguous: :later)
+# nonexistent: :raise (default), :forward, :backward
+# ambiguous:   :raise (default), :earlier, :later
+
 # take control and use iteration
 schedule = IceCube::Schedule.new
 schedule.add_recurrence_rule IceCube::Rule.daily.until(Date.today + 30)

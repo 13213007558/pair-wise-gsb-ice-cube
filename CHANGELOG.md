@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 ### Added
+- Optional calendar durations (`IceCube::CalendarDuration`, e.g. `P1D`) that
+  advance the local clock per occurrence, distinct from numeric durations and
+  `PT24H` which stay elapsed seconds. Configurable policies for nonexistent
+  (spring-forward) and repeated (fall-back) local end times, preserved through
+  iCalendar DURATION, hash and YAML serialization.
 - Support for BYSETPOS with all rule frequencies (yearly, monthly, weekly, daily, hourly, minutely, secondly). ([#449](https://github.com/ice-cube-ruby/ice_cube/pull/449)) by [@nehresma](https://github.com/nehresma) and [@NicolasMarlier](https://github.com/NicolasMarlier)
 
 ### Changed

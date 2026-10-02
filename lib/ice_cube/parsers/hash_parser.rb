@@ -10,7 +10,7 @@ module IceCube
       data = normalize_keys(hash)
       schedule = IceCube::Schedule.new parse_time(data[:start_time])
       apply_duration schedule, data
-      apply_end_time schedule, data
+      apply_end_time schedule, data unless data[:duration].is_a?(Hash)
       apply_rrules schedule, data
       apply_exrules schedule, data
       apply_rtimes schedule, data
@@ -41,7 +41,14 @@ module IceCube
 
     def apply_duration(schedule, data)
       return unless data[:duration]
-      schedule.duration = data[:duration].to_i
+      schedule.duration = parse_duration(data[:duration])
+    end
+
+    def parse_duration(value)
+      return value if value.is_a?(IceCube::CalendarDuration) || value.is_a?(Numeric)
+      return IceCube::CalendarDuration.parse(value) if value.is_a?(String)
+      return IceCube::CalendarDuration.from_hash(FlexibleHash.new(value)) if value.is_a?(Hash)
+      value.to_i
     end
 
     def apply_end_time(schedule, data)
