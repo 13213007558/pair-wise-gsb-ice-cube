@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 ### Added
+- Support for BYWEEKNO in yearly rules via `week_of_year`, including WKST-based week numbering, negative week numbers, week 53, and iCal/hash serialization.
 - Support for BYSETPOS with all rule frequencies (yearly, monthly, weekly, daily, hourly, minutely, secondly). ([#449](https://github.com/ice-cube-ruby/ice_cube/pull/449)) by [@nehresma](https://github.com/nehresma) and [@NicolasMarlier](https://github.com/NicolasMarlier)
 
 ### Changed

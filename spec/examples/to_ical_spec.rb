@@ -87,6 +87,20 @@ describe IceCube, "to_ical" do
     expect(ical).to include("BYSETPOS=-1,1")
   end
 
+  it "should be able to serialize a .week_of_year rule to_ical" do
+    rule = IceCube::Rule.yearly.week_of_year(1, -1).day(:monday)
+    ical = rule.to_ical
+    expect(ical).to include("FREQ=YEARLY")
+    expect(ical).to include("BYWEEKNO=1,-1")
+    expect(ical).to include("BYDAY=MO")
+    expect(ical).not_to include("WKST")
+  end
+
+  it "should serialize a non-default week start as WKST" do
+    rule = IceCube::Rule.yearly.week_of_year(20, week_start: :sunday)
+    expect(rule.to_ical).to include("WKST=SU")
+  end
+
   it "should be able to serialize a secondly BYSETPOS rule to_ical" do
     rule = IceCube::Rule.secondly.by_set_pos(1)
     ical = rule.to_ical

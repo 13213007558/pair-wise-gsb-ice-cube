@@ -17,6 +17,9 @@ es:
     days_of_year:
       one: 'el día %{segments}'
       other: 'los días %{segments}'
+    weeks_of_year:
+      one: 'la semana %{segments} del año'
+      other: 'las semanas %{segments} del año'
     at_hours_of_the_day:
       one: 'en la hora %{segments}'
       other: 'en las horas %{segments}'

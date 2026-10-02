@@ -17,6 +17,9 @@ nl:
     days_of_year:
       other: '%{segments} dagen van het jaar'
       one: '%{segments} dag van het jaar'
+    weeks_of_year:
+      other: '%{segments} weken van het jaar'
+      one: '%{segments} week van het jaar'
     at_hours_of_the_day:
       other: op de %{segments} uren van de dag
       one: op het %{segments} uur

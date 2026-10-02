@@ -39,6 +39,9 @@ sv:
     days_of_year:
       other: '%{segments} dagen på året'
       one: '%{segments} dagen på året'
+    weeks_of_year:
+      other: '%{segments} veckorna på året'
+      one: '%{segments} veckan på året'
     at_hours_of_the_day:
       other: i %{segments} timme på dygnet
       one: i %{segments} timme på dygnet

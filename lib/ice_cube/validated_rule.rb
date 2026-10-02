@@ -16,8 +16,8 @@ module IceCube
     VALIDATION_ORDER = [
       :year, :month, :day, :wday, :hour, :min, :sec, :count, :until,
       :base_sec, :base_min, :base_day, :base_hour, :base_month, :base_wday,
-      :day_of_year, :second_of_minute, :minute_of_hour, :day_of_month,
-      :hour_of_day, :month_of_year, :day_of_week,
+      :day_of_year, :week_of_year, :second_of_minute, :minute_of_hour,
+      :day_of_month, :hour_of_day, :month_of_year, :day_of_week,
       :interval,
       # BYSETPOS selects the nth occurrence within the set after all other
       # BYxxx filters/expansions are applied (RFC 5545), so it must run last.

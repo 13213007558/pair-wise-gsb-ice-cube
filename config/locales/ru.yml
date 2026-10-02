@@ -43,6 +43,11 @@ ru:
     days_of_year:
       other: '%{segments} день года'
       many: '%{segments} день года'
+    weeks_of_year:
+      one: '%{segments} неделя года'
+      few: '%{segments} недели года'
+      other: '%{segments} недели года'
+      many: '%{segments} недель года'
       few: '%{segments} день года'
       one: '%{segments} день года'
     at_hours_of_the_day:

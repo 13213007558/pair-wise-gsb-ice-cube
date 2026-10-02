@@ -81,7 +81,7 @@ module IceCube
       # We must anchor the temp schedule to the interval boundary for expanded units,
       # while preserving DTSTART's value for implicit (non-expanded) units.
       v = rule.validations
-      expands_day = v[:day] || v[:day_of_month] || v[:day_of_week] || v[:day_of_year]
+      expands_day = v[:day] || v[:day_of_month] || v[:day_of_week] || v[:day_of_year] || v[:week_of_year]
       expands_month = v[:month_of_year]
       expands_hour = v[:hour_of_day]
       expands_min = v[:minute_of_hour]

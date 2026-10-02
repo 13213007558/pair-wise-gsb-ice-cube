@@ -178,6 +178,25 @@ module IceCube
     end
     deprecated_alias :normalize_weekday, :normalize_wday
 
+    # The date on which the week (per week_start) containing +date+ begins.
+    def self.week_start_for(date, week_start)
+      date - normalize_wday(date.wday, week_start)
+    end
+
+    # The date on which week 1 of +year+ begins. Per RFC 5545, week 1 is the
+    # first week (per WKST) with at least four days in the new year, so it may
+    # start in the previous calendar year. The week containing January 4th
+    # always satisfies this, regardless of the week start.
+    def self.first_week_start(year, week_start)
+      week_start_for(Date.new(year, 1, 4), week_start)
+    end
+
+    # The number of weeks (52 or 53) in +year+ per the week numbering defined
+    # by +week_start+.
+    def self.weeks_in_year(year, week_start)
+      ((first_week_start(year + 1, week_start) - first_week_start(year, week_start)) / 7).to_i
+    end
+
     def self.ical_day_to_symbol(str)
       day = ICAL_DAYS[str]
       raise ArgumentError, "Invalid day: #{str}" if day.nil?

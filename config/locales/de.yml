@@ -39,6 +39,9 @@ de:
     days_of_year:
       one: '%{segments} Tag des Jahres'
       other: '%{segments} Tag des Jahres'
+    weeks_of_year:
+      one: '%{segments} Woche des Jahres'
+      other: '%{segments} Wochen des Jahres'
     at_hours_of_the_day:
       one: in der %{segments} Stunde des Tages
       other: in der %{segments} Stunde des Tages

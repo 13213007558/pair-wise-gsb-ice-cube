@@ -39,6 +39,9 @@ pt-BR:
     days_of_year:
       other: '%{segments} dias do ano'
       one: '%{segments} dia'
+    weeks_of_year:
+      other: '%{segments} semanas do ano'
+      one: '%{segments} semana do ano'
     at_hours_of_the_day:
       other: às %{segments} horas
       one: à %{segments} hora

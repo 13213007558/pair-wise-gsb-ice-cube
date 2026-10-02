@@ -85,6 +85,8 @@ module IceCube
           validations[:month_of_year] = value.split(",").map(&:to_i)
         when "BYYEARDAY"
           validations[:day_of_year] = value.split(",").map(&:to_i)
+        when "BYWEEKNO"
+          validations[:week_of_year] = value.split(",").map(&:to_i)
         when "BYSETPOS"
           validations[:by_set_pos] = value.split(",").map(&:to_i)
         else

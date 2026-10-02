@@ -17,6 +17,9 @@ id:
     days_of_year:
       other: 'hari ke %{segments} dalam satu tahun'
       one: 'hari ke %{segments} dalam satu tahun'
+    weeks_of_year:
+      other: 'minggu ke %{segments} dalam satu tahun'
+      one: 'minggu ke %{segments} dalam satu tahun'
     at_hours_of_the_day:
       other: pada jam %{segments} dalam satu hari
       one: pada jam %{segments} dalam satu hari

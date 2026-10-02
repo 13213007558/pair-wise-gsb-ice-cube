@@ -17,6 +17,9 @@ ja:
     days_of_year:
       other: '%{segments}日'
       one: '%{segments}日'
+    weeks_of_year:
+      other: '第%{segments}週'
+      one: '第%{segments}週'
     at_hours_of_the_day:
       other: '%{segments}時'
       one: '%{segments}時'

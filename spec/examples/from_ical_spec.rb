@@ -48,6 +48,16 @@ module IceCube
       expect(rule).to eq(IceCube::Rule.yearly.day_of_year(100, 200))
     end
 
+    it "should be able to parse a .week_of_year rule" do
+      rule = IceCube::Rule.from_ical("FREQ=YEARLY;BYWEEKNO=1,-1")
+      expect(rule).to eq(IceCube::Rule.yearly.week_of_year(1, -1))
+    end
+
+    it "should be able to parse a .week_of_year rule with a week start" do
+      rule = IceCube::Rule.from_ical("FREQ=YEARLY;WKST=SU;BYWEEKNO=20;BYDAY=MO")
+      expect(rule).to eq(IceCube::Rule.yearly.week_of_year(20, week_start: :sunday).day(:monday))
+    end
+
     it "should be able to serialize a .month_of_year rule" do
       rule = IceCube::Rule.from_ical("FREQ=DAILY;BYMONTH=1,4")
       expect(rule).to eq(IceCube::Rule.daily.month_of_year(:january, :april))

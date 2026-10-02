@@ -79,6 +79,7 @@ module IceCube
         rule = IceCube::Rule.send(interval_type, hash[:interval] || 1)
 
         rule.interval(hash[:interval] || 1, TimeUtil.wday_to_sym(hash[:week_start] || 0)) if rule.is_a? WeeklyRule
+        rule.week_start = hash[:week_start] if rule.is_a?(YearlyRule) && hash[:week_start]
         rule.until(TimeUtil.deserialize_time(hash[:until])) if hash[:until]
         rule.count(hash[:count]) if hash[:count]
 

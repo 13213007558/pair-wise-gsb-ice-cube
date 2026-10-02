@@ -253,6 +253,22 @@ schedule.add_recurrence_rule IceCube::Rule.yearly(3).month_of_year(:march)
 schedule.add_recurrence_rule IceCube::Rule.yearly(3).month_of_year(3)
 ```
 
+### Yearly (by week of year)
+
+Weeks are numbered per the rule's week start (WKST, defaulting to Monday per
+RFC 5545): week 1 is the first week with at least four days in the new year,
+so it may begin in the previous calendar year. Negative week numbers count
+back from the last week of the year, and week 53 only matches in years that
+have one.
+
+```ruby
+# monday of the first week of the year (may fall in late december)
+schedule.add_recurrence_rule IceCube::Rule.yearly.week_of_year(1).day(:monday)
+
+# friday of the last week of the year, with weeks starting on sunday
+schedule.add_recurrence_rule IceCube::Rule.yearly.week_of_year(-1, week_start: :sunday).day(:friday)
+```
+
 ### BYSETPOS (select the nth occurrence)
 
 BYSETPOS selects the nth occurrence within each interval after all other BYxxx
