@@ -41,7 +41,16 @@ module IceCube
 
     def apply_duration(schedule, data)
       return unless data[:duration]
-      schedule.duration = data[:duration].to_i
+      duration = data[:duration]
+      if duration.is_a?(Numeric)
+        schedule.duration = duration
+      else
+        schedule.duration = Schedule.coerce_duration(
+          duration,
+          ambiguous_time: data[:ambiguous_time] || data[:ambiguous],
+          nonexistent_time: data[:nonexistent_time] || data[:nonexistent]
+        )
+      end
     end
 
     def apply_end_time(schedule, data)

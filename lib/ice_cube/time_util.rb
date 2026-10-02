@@ -40,6 +40,15 @@ module IceCube
       end
     end
 
+    def self.resolve_local(time, reference, ambiguous:, nonexistent:)
+      target = Time.utc(*local_parts(time))
+      if reference.respond_to?(:time_zone)
+        resolve_with_time_zone(target, reference, ambiguous, nonexistent)
+      else
+        resolve_with_system_zone(target, reference, ambiguous, nonexistent)
+      end
+    end
+
     def self.match_zone(input_time, reference)
       return unless (time = ensure_time(input_time, reference))
       time = if reference.respond_to? :time_zone
@@ -261,6 +270,131 @@ module IceCube
       else
         0.0
       end
+    end
+
+    def self.local_parts(time)
+      [time.year, time.month, time.day, time.hour, time.min,
+       time.sec + subsec(time)]
+    end
+
+    def self.canonical_time_policy(value, type)
+      aliases = case type
+      when :ambiguous
+        {earlier: :first, dst: :first, later: :last, std: :last}
+      else
+        {after: :forward, adjust: :forward, before: :backward}
+      end
+      policy = value.to_sym
+      aliases.fetch(policy, policy)
+    end
+
+    def self.validate_time_policy!(policy, valid_policies, type)
+      return if valid_policies.include?(policy)
+      raise ArgumentError, "Invalid #{type} time policy: #{policy.inspect}"
+    end
+
+    def self.resolve_with_time_zone(target, reference, ambiguous, nonexistent)
+      periods = reference.time_zone.tzinfo.periods_for_local(target)
+      return target_in_period(target, reference, periods.first) if periods.one?
+      return resolve_ambiguous_periods(periods, target, reference, ambiguous) if periods.any?
+      resolve_gap_periods(target, reference, nonexistent)
+    end
+
+    def self.resolve_ambiguous_periods(periods, target, reference, ambiguous)
+      policy = canonical_time_policy(ambiguous, :ambiguous)
+      validate_time_policy!(policy, [:raise, :first, :last], :ambiguous)
+      return target_in_period(target, reference, periods.min_by { |period| local_epoch(target, period) }) if policy == :first
+      return target_in_period(target, reference, periods.max_by { |period| local_epoch(target, period) }) if policy == :last
+
+      raise ArgumentError, "#{target.strftime("%Y-%m-%d %H:%M:%S")} is ambiguous in #{reference.time_zone.name}"
+    end
+
+    def self.resolve_gap_periods(target, reference, nonexistent)
+      policy = canonical_time_policy(nonexistent, :nonexistent)
+      validate_time_policy!(policy, [:raise, :forward, :backward], :nonexistent)
+      before_period, after_period = surrounding_periods(target, reference)
+      gap = after_period.utc_total_offset - before_period.utc_total_offset
+      shifted = target + (policy == :backward ? -gap : gap)
+      period = reference.time_zone.tzinfo.periods_for_local(shifted).first
+      return target_in_period(shifted, reference, period) unless policy == :raise
+
+      raise ArgumentError, "#{target.strftime("%Y-%m-%d %H:%M:%S")} does not exist in #{reference.time_zone.name}"
+    end
+
+    def self.surrounding_periods(target, reference)
+      tzinfo = reference.time_zone.tzinfo
+      before_time = target
+      after_time = target
+      before_time -= 60 while tzinfo.periods_for_local(before_time).empty? && target - before_time < ONE_DAY
+      after_time += 60 while tzinfo.periods_for_local(after_time).empty? && after_time - target < ONE_DAY
+      before_period = tzinfo.periods_for_local(before_time).min_by { |period| period.utc_total_offset }
+      after_period = tzinfo.periods_for_local(after_time).max_by { |period| period.utc_total_offset }
+      [before_period, after_period]
+    end
+
+    def self.target_in_period(target, reference, period)
+      reference.time_zone.at(local_epoch(target, period))
+    end
+
+    def self.local_epoch(target, period)
+      target.to_r - period.utc_total_offset
+    end
+
+    def self.add_exact_seconds(time, seconds)
+      shifted = Time.at(time.to_r + seconds.to_r).utc
+      if time.respond_to?(:time_zone)
+        shifted.in_time_zone(time.time_zone)
+      elsif time.zone.nil?
+        shifted.getlocal
+      else
+        TimeUtil.match_zone(shifted, time)
+      end
+    end
+
+    def self.resolve_with_system_zone(target, reference, ambiguous, nonexistent)
+      candidates = system_zone_candidates(target, reference)
+      return resolve_ambiguous_candidates(candidates, target, ambiguous) if candidates.length > 1
+      return candidates.first if candidates.one?
+      resolve_system_gap(target, reference, nonexistent)
+    end
+
+    def self.system_zone_candidates(target, reference)
+      offsets = [reference.utc_offset]
+      [-2, -1, 1, 2].each do |direction|
+        offsets << (reference + direction * ONE_DAY).utc_offset
+      end
+      offsets.uniq.filter_map do |offset|
+        time = Time.new(target.year, target.month, target.day, target.hour, target.min,
+                        target.sec + target.subsec, offset)
+        local = time.getlocal
+        time if local_parts(local).first(6) == local_parts(target).first(6) && local.utc_offset == offset
+      end.uniq(&:to_r).sort_by(&:to_r)
+    end
+
+    def self.resolve_ambiguous_candidates(candidates, target, ambiguous)
+      policy = canonical_time_policy(ambiguous, :ambiguous)
+      validate_time_policy!(policy, [:raise, :first, :last], :ambiguous)
+      return candidates.first if policy == :first
+      return candidates.last if policy == :last
+
+      raise ArgumentError, "#{target.strftime("%Y-%m-%d %H:%M:%S")} is ambiguous in #{target.zone}"
+    end
+
+    def self.resolve_system_gap(target, reference, nonexistent)
+      policy = canonical_time_policy(nonexistent, :nonexistent)
+      validate_time_policy!(policy, [:raise, :forward, :backward], :nonexistent)
+      if policy == :raise
+        raise ArgumentError, "#{target.strftime("%Y-%m-%d %H:%M:%S")} does not exist in #{target.zone}"
+      end
+      return Time.local(target.year, target.month, target.day, target.hour, target.min,
+                         target.sec + target.subsec) if policy == :forward
+
+      forward = Time.local(target.year, target.month, target.day, target.hour, target.min,
+                           target.sec + target.subsec)
+      shifted_wall = Time.utc(target.year, target.month, target.day, target.hour, target.min,
+                              target.sec + target.subsec) - (forward.utc_offset - reference.utc_offset)
+      Time.new(shifted_wall.year, shifted_wall.month, shifted_wall.day, shifted_wall.hour,
+               shifted_wall.min, shifted_wall.sec + shifted_wall.subsec, reference.utc_offset)
     end
 
     # A utility class for safely moving time around

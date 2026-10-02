@@ -100,6 +100,17 @@ schedule.add_recurrence_rule IceCube::Rule.daily
 schedule.occurring_at?(now + 1800) # true
 schedule.occurring_between?(t1, t2)
 
+# numeric durations remain elapsed seconds; ISO durations advance local days
+calendar = IceCube::Schedule.new(now, duration: "P1D") # same local clock time
+exact = IceCube::Schedule.new(now, duration: IceCube::ONE_DAY) # always 86400 seconds
+calendar.first.end_time - calendar.first.start_time # 23 or 25 hours on DST days
+exact.first.end_time - exact.first.start_time    # always 24 hours
+
+# choose handling when a nominal end is skipped or repeated by a DST transition
+IceCube::Schedule.new(now, duration: "P1D",
+                      ambiguous_time: :first,   # :first, :last, or :raise
+                      nonexistent_time: :forward) # :forward, :backward, or :raise
+
 # using end_time also sets the duration
 schedule = IceCube::Schedule.new(start = Time.now, end_time: start + 3600)
 schedule.add_recurrence_rule IceCube::Rule.daily

@@ -14,21 +14,26 @@ module IceCube
       end
 
       lines.each do |line|
-        (property, value) = line.split(":")
-        (property, _tzid) = property.split(";")
+        property_with_params, value = line.strip.split(":", 2)
+        property, *params = property_with_params.split(";")
+        tzid = params.map { |param| param.split("=", 2) }.to_h["TZID"]
         case property
         when "DTSTART"
-          data[:start_time] = TimeUtil.deserialize_time(value)
+          data[:start_time] = parse_ical_time(value, tzid)
         when "DTEND"
-          data[:end_time] = TimeUtil.deserialize_time(value)
+          data[:end_time] = parse_ical_time(value, tzid)
         when "RDATE"
           data[:rtimes] ||= []
-          data[:rtimes] += value.split(",").map { |v| TimeUtil.deserialize_time(v) }
+          data[:rtimes] += value.split(",").map { |v| parse_ical_time(v, tzid) }
         when "EXDATE"
           data[:extimes] ||= []
-          data[:extimes] += value.split(",").map { |v| TimeUtil.deserialize_time(v) }
+          data[:extimes] += value.split(",").map { |v| parse_ical_time(v, tzid) }
         when "DURATION"
-          data[:duration] # FIXME
+          data[:duration] = value.strip
+        when "X-ICECUBE-AMBIGUOUS-TIME"
+          data[:ambiguous_time] = value
+        when "X-ICECUBE-NONEXISTENT-TIME"
+          data[:nonexistent_time] = value
         when "RRULE"
           data[:rrules] ||= []
           data[:rrules] += [rule_from_ical(value)]
@@ -94,5 +99,15 @@ module IceCube
 
       Rule.from_hash(params)
     end
+
+    def self.parse_ical_time(value, tzid)
+      return TimeUtil.deserialize_time(value) unless tzid && defined?(ActiveSupport)
+
+      time = Time.strptime(value, "%Y%m%dT%H%M%S")
+      zone = ActiveSupport::TimeZone[tzid] rescue nil
+      zone ||= ActiveSupport::TimeZone[ActiveSupport::TimeZone::MAPPING[tzid]] rescue nil
+      zone ? zone.local(time.year, time.month, time.day, time.hour, time.min, time.sec) : TimeUtil.deserialize_time(value)
+    end
+
   end
 end

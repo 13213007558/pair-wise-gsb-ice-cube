@@ -55,7 +55,7 @@ RSpec.configure do |config|
     orig_zone = ENV["TZ"]
     ENV["TZ"] = example.metadata[:system_time_zone]
     example.run
-    ENV["TZ"] = orig_zone
+    orig_zone.nil? ? ENV.delete("TZ") : ENV["TZ"] = orig_zone
   end
 
   config.around :each, locale: true do |example|

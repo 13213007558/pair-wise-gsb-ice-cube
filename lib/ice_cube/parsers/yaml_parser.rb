@@ -2,7 +2,7 @@ require "yaml"
 
 module IceCube
   class YamlParser < HashParser
-    SERIALIZED_START = /start_(?:time|date): .+(?<tz>(?:-|\+)\d{2}:\d{2})$/
+    SERIALIZED_START = /start_(?:time|date):\s+\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?\s(?<tz>(?:-|\+)\d{2}:\d{2})\s*$/
 
     attr_reader :hash
 

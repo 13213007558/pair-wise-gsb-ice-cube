@@ -15,7 +15,11 @@ module IceCube
     # Create a new schedule
     def initialize(start_time = nil, options = {})
       self.start_time = start_time || TimeUtil.now
-      self.end_time = self.start_time + options[:duration] if options[:duration]
+      if options.key?(:duration)
+        @duration = self.class.coerce_duration(options[:duration], options)
+        @duration = nil if @duration == 0
+        @end_time = @duration ? end_time_for(@start_time) : nil
+      end
       self.end_time = options[:end_time] if options[:end_time]
       @all_recurrence_rules = []
       @all_exception_rules = []
@@ -31,15 +35,40 @@ module IceCube
     # Set end_time
     def end_time=(end_time)
       @end_time = TimeUtil.ensure_time end_time
+      @duration = nil
     end
     deprecated_alias :end_date=, :end_time=
 
     def duration
-      end_time ? end_time - start_time : 0
+      @duration || (end_time ? end_time - start_time : 0)
     end
 
-    def duration=(seconds)
-      @end_time = start_time + seconds
+    def duration=(value, options = {})
+      @duration = self.class.coerce_duration(value, options)
+      @duration = nil if @duration == 0
+      @end_time = @duration ? end_time_for(start_time) : nil
+      @duration
+    end
+
+    def end_time_for(time)
+      case duration
+      when CalendarDuration then duration.after(time)
+      when Numeric then TimeUtil.add_exact_seconds(time, duration)
+      else
+        time
+      end
+    end
+
+    def self.coerce_duration(value, options = {})
+      return value if value.is_a?(CalendarDuration)
+      return value if value.is_a?(Numeric)
+
+      ambiguous = options[:ambiguous_time] || options[:ambiguous]
+      nonexistent = options[:nonexistent_time] || options[:nonexistent]
+      ambiguous = ambiguous.to_sym if ambiguous
+      nonexistent = nonexistent.to_sym if nonexistent
+      CalendarDuration.parse(value, ambiguous: ambiguous || :raise,
+                                    nonexistent: nonexistent || :raise)
     end
 
     # Add a recurrence time to the schedule
@@ -240,9 +269,11 @@ module IceCube
     # Determine if the schedule is occurring at a given time
     def occurring_at?(time)
       time = TimeUtil.match_zone(time, start_time) or raise ArgumentError, "Time required, got #{time.inspect}"
-      if duration > 0
+      if !duration.zero?
         return false if exception_time?(time)
-        occurs_between?(time - duration + 1, time)
+        occurrences_between(time - duration_span_lookback, time + duration_span_lookback, spans: true).any? do |occurrence|
+          occurrence.start_time <= time && occurrence.end_time > time
+        end
       else
         occurs_at?(time)
       end
@@ -257,34 +288,26 @@ module IceCube
       unless terminating? || other_schedule.terminating? || closing_time
         raise ArgumentError, "One or both schedules must be terminating to use #conflicts_with?"
       end
-      # Pick the terminating schedule, and other schedule
-      # No need to reverse if terminating? or there is a closing time
-      terminating_schedule = self
-      unless terminating? || closing_time
-        terminating_schedule, other_schedule = other_schedule, terminating_schedule
+      terminating_schedule = if terminating?
+        self
+      elsif other_schedule.terminating?
+        other_schedule
+      else
+        self
       end
-      # Go through each occurrence of the terminating schedule and determine
-      # if the other occurs at that time
-      #
-      last_time = nil
-      terminating_schedule.each_occurrence do |time|
-        if closing_time && time > closing_time
-          last_time = closing_time
-          break
-        end
-        last_time = time
-        return true if other_schedule.occurring_at?(time)
-      end
-      # Due to durations, we need to walk up to the end time, and verify in the
-      # other direction
-      if last_time
-        last_time += terminating_schedule.duration
-        other_schedule.each_occurrence do |time|
-          break if time > last_time
-          return true if terminating_schedule.occurring_at?(time)
+      comparison_schedule = terminating_schedule.equal?(self) ? other_schedule : self
+      terminating_schedule.each_occurrence do |occurrence|
+        break if closing_time && occurrence.start_time > closing_time
+
+        comparison = comparison_schedule.occurrences_between(
+          occurrence.start_time,
+          occurrence.end_time,
+          spans: true
+        )
+        return true if comparison.any? do |other_occurrence|
+          occurrence.intersects?(other_occurrence) || occurrence.start_time == other_occurrence.start_time
         end
       end
-      # No conflict, return false
       false
     end
 
@@ -324,12 +347,23 @@ module IceCube
     # Serialize this schedule to_ical
     def to_ical(force_utc = false)
       pieces = []
-      pieces << "DTSTART#{IcalBuilder.ical_format(start_time, force_utc)}"
+      calendar_duration = @duration.is_a?(CalendarDuration)
+      pieces << "DTSTART#{IcalBuilder.ical_format(start_time, force_utc, calendar_duration)}"
       pieces.concat recurrence_rules.map { |r| "RRULE:#{r.to_ical}" }
       pieces.concat exception_rules.map { |r| "EXRULE:#{r.to_ical}" }
-      pieces.concat recurrence_times_without_start_time.map { |t| "RDATE#{IcalBuilder.ical_format(t, force_utc)}" }
-      pieces.concat exception_times.map { |t| "EXDATE#{IcalBuilder.ical_format(t, force_utc)}" }
-      pieces << "DTEND#{IcalBuilder.ical_format(end_time, force_utc)}" if end_time
+      pieces.concat recurrence_times_without_start_time.map { |t| "RDATE#{IcalBuilder.ical_format(t, force_utc, calendar_duration)}" }
+      pieces.concat exception_times.map { |t| "EXDATE#{IcalBuilder.ical_format(t, force_utc, calendar_duration)}" }
+      if calendar_duration
+        pieces << "DURATION:#{ical_duration}"
+        if duration.ambiguous_policy != :raise
+          pieces << "X-ICECUBE-AMBIGUOUS-TIME:#{duration.ambiguous_policy}"
+        end
+        if duration.nonexistent_policy != :raise
+          pieces << "X-ICECUBE-NONEXISTENT-TIME:#{duration.nonexistent_policy}"
+        end
+      elsif end_time
+        pieces << "DTEND#{IcalBuilder.ical_format(end_time, force_utc)}"
+      end
       pieces.join("\n")
     end
 
@@ -356,7 +390,10 @@ module IceCube
       data = {}
       data[:start_time] = TimeUtil.serialize_time(start_time)
       data[:start_date] = data[:start_time] if IceCube.compatibility <= 11
-      data[:end_time] = TimeUtil.serialize_time(end_time) if end_time
+      data[:duration] = duration_for_serialization if @duration
+      data[:ambiguous_time] = duration.ambiguous_policy.to_s if @duration.is_a?(CalendarDuration)
+      data[:nonexistent_time] = duration.nonexistent_policy.to_s if @duration.is_a?(CalendarDuration)
+      data[:end_time] = TimeUtil.serialize_time(end_time) if end_time && !@duration
       data[:rrules] = recurrence_rules.map(&:to_hash)
       data[:exrules] = exception_rules.map(&:to_hash) if exception_rules.any?
       data[:rtimes] = recurrence_times.map do |rt|
@@ -385,7 +422,7 @@ module IceCube
 
     def hash
       [
-        TimeUtil.hash(start_time), duration,
+        TimeUtil.hash(start_time), duration_for_equality,
         *@all_recurrence_rules.map(&:hash).sort!,
         *@all_exception_rules.map(&:hash).sort!
       ].hash
@@ -408,6 +445,24 @@ module IceCube
 
     private
 
+    def ical_duration
+      duration.is_a?(CalendarDuration) ? duration.to_ical : IcalBuilder.ical_duration(duration)
+    end
+
+    def duration_for_serialization
+      return duration.to_s if duration.is_a?(CalendarDuration)
+
+      duration
+    end
+
+    def duration_for_equality
+      if duration.is_a?(CalendarDuration)
+        [duration.to_s, duration.ambiguous_policy, duration.nonexistent_policy]
+      else
+        duration
+      end
+    end
+
     # Reset all rules for another run
     def reset
       @all_recurrence_rules.each(&:reset)
@@ -422,16 +477,19 @@ module IceCube
       closing_time = TimeUtil.match_zone(closing_time, start_time)
       opening_time += TimeUtil.subsec(start_time) - TimeUtil.subsec(opening_time)
       opening_time = start_time if opening_time < start_time
-      spans = options[:spans] == true && duration != 0
+      spans = options[:spans] == true && !duration.zero?
+      point_query = closing_time == opening_time
       Enumerator.new do |yielder|
         reset
         t1 = full_required? ? start_time : opening_time
-        t1 -= duration if spans
+        t1 -= duration_span_lookback if spans
         t1 = start_time if t1 < start_time
         loop do
           break unless (t0 = next_time(t1, closing_time))
           break if closing_time && t0 > closing_time
-          if spans ? (t0.end_time > opening_time) : (t0 >= opening_time)
+          starts_before_closing = closing_time.nil? || t0.start_time <= closing_time
+          within_point_boundary = !point_query || t0.start_time < closing_time
+          if spans ? (t0.end_time > opening_time && starts_before_closing && within_point_boundary) : (t0 >= opening_time)
             yielder << (block_given? ? yield(t0) : t0)
           end
           t1 = t0 + 1
@@ -459,8 +517,16 @@ module IceCube
           rule.increment_uses if candidate == min_time && rule.respond_to?(:increment_uses)
         end
         next (time = min_time + 1) if exception_time?(min_time)
-        break Occurrence.new(min_time, min_time + duration)
+        break Occurrence.new(min_time, end_time_for(min_time))
       end
+    end
+
+    def nominal_duration
+      duration.is_a?(CalendarDuration) ? duration.nominal_seconds : duration
+    end
+
+    def duration_span_lookback
+      duration.is_a?(CalendarDuration) ? nominal_duration * 2 : nominal_duration
     end
 
     # Indicate if any rule needs to be run from the start of time
