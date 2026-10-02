@@ -377,6 +377,12 @@ module IceCube
       end
     end
 
+    # Infer concise recurrence explanations for dates known to have occurred
+    # during a complete observation window. See ScheduleInference for options.
+    def self.infer(observation_window, occurred_dates, options = {})
+      ScheduleInference.infer(observation_window, occurred_dates, options)
+    end
+
     # Determine if the schedule will end
     # @return [Boolean] true if ending, false if repeating forever
     def terminating?

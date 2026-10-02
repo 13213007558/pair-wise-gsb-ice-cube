@@ -11,6 +11,7 @@ module IceCube
 
   autoload :Rule, "ice_cube/rule"
   autoload :Schedule, "ice_cube/schedule"
+  autoload :ScheduleInference, "ice_cube/schedule_inference"
   autoload :Occurrence, "ice_cube/occurrence"
 
   autoload :IcalBuilder, "ice_cube/builders/ical_builder"
