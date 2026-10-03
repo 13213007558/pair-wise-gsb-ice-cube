@@ -212,6 +212,20 @@ module IceCube
       enumerate_occurrences(begin_time, closing_time, options).to_a
     end
 
+    # Number of deduplicated, exception-filtered occurrences in an inclusive
+    # range. The fast path supports fixed-UTC schedules made from day/week/
+    # month/year rules and finite explicit exception times.
+    def count_between(begin_time, closing_time)
+      FastOccurrencePlanner.new(self).count_between(begin_time, closing_time)
+    end
+
+    # Find the zero-based deduplicated, exception-filtered occurrence without
+    # walking through all earlier occurrences. Returns nil when the index is
+    # beyond a terminating schedule.
+    def occurrence_at(index)
+      FastOccurrencePlanner.new(self).occurrence_at(index)
+    end
+
     # Return a boolean indicating if an occurrence falls between two times
     def occurs_between?(begin_time, closing_time, options = {})
       enumerate_occurrences(begin_time, closing_time, options).next
