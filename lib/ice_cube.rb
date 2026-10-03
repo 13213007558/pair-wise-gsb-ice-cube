@@ -23,6 +23,9 @@ module IceCube
 
   autoload :CountExceeded, "ice_cube/errors/count_exceeded"
   autoload :UntilExceeded, "ice_cube/errors/until_exceeded"
+  autoload :UnsupportedScheduleError, "ice_cube/errors/unsupported_schedule_error"
+
+  autoload :FastPath, "ice_cube/fast_path"
 
   autoload :ValidatedRule, "ice_cube/validated_rule"
   autoload :SingleOccurrenceRule, "ice_cube/single_occurrence_rule"

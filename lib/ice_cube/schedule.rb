@@ -212,6 +212,26 @@ module IceCube
       enumerate_occurrences(begin_time, closing_time, options).to_a
     end
 
+    # The occurrence at +index+ (0-based) in the deduplicated,
+    # exception-filtered occurrence sequence, located directly instead of
+    # by enumerating every preceding occurrence. Returns nil when the
+    # schedule terminates before producing that many occurrences.
+    #
+    # Only schedules made of daily, weekly, monthly and yearly rules in
+    # fixed UTC (plus explicit exception times) are supported; anything
+    # else raises IceCube::UnsupportedScheduleError. See IceCube::FastPath
+    # for the exact supported subset.
+    def occurrence_at(index)
+      FastPath.new(self).occurrence_at(index)
+    end
+
+    # Number of occurrences between two times (inclusive of both ends),
+    # counted directly instead of by enumerating them. Same supported
+    # subset as #occurrence_at.
+    def count_between(begin_time, closing_time)
+      FastPath.new(self).count_between(begin_time, closing_time)
+    end
+
     # Return a boolean indicating if an occurrence falls between two times
     def occurs_between?(begin_time, closing_time, options = {})
       enumerate_occurrences(begin_time, closing_time, options).next
