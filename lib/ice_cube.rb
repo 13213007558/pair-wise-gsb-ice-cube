@@ -6,6 +6,7 @@ module IceCube
 
   autoload :TimeUtil, "ice_cube/time_util"
   autoload :FlexibleHash, "ice_cube/flexible_hash"
+  autoload :BusinessCalendar, "ice_cube/business_calendar"
 
   require "ice_cube/i18n"
 
@@ -64,6 +65,7 @@ module IceCube
     autoload :MinuteOfHour, "ice_cube/validations/minute_of_hour"
     autoload :SecondOfMinute, "ice_cube/validations/second_of_minute"
     autoload :DayOfMonth, "ice_cube/validations/day_of_month"
+    autoload :BusinessDayOfMonth, "ice_cube/validations/business_day_of_month"
     autoload :DayOfWeek, "ice_cube/validations/day_of_week"
     autoload :Day, "ice_cube/validations/day"
     autoload :DayOfYear, "ice_cube/validations/day_of_year"

@@ -82,8 +82,9 @@ module IceCube
         rule.until(TimeUtil.deserialize_time(hash[:until])) if hash[:until]
         rule.count(hash[:count]) if hash[:count]
 
+        calendar_version = hash[:business_calendar_version]
         hash[:validations]&.each do |name, args|
-          apply_validation(rule, name, args)
+          apply_validation(rule, name, args, calendar_version)
         end
 
         rule
@@ -91,14 +92,24 @@ module IceCube
 
       private
 
-      def apply_validation(rule, name, args)
+      def apply_validation(rule, name, args, calendar_version = nil)
         name = name.to_sym
 
         unless ValidatedRule::VALIDATION_ORDER.include?(name)
           raise ArgumentError, "Invalid rule validation type: #{name}"
         end
 
-        args.is_a?(Array) ? rule.send(name, *args) : rule.send(name, args)
+        if name == :business_day_of_month
+          if calendar_version.nil? || calendar_version.to_s.empty?
+            raise ArgumentError,
+              "business_day_of_month validation requires a business_calendar_version"
+          end
+          rule.business_day_of_month(args, calendar: BusinessCalendar.find(calendar_version))
+        elsif args.is_a?(Array)
+          rule.send(name, *args)
+        else
+          rule.send(name, args)
+        end
       end
     end
 

@@ -14,6 +14,9 @@ nl:
     days_of_month:
       other: '%{segments} dagen van de maand'
       one: '%{segments} dag van de maand'
+    business_days_of_month:
+      other: '%{segments} werkdagen van de maand'
+      one: '%{segments} werkdag van de maand'
     days_of_year:
       other: '%{segments} dagen van het jaar'
       one: '%{segments} dag van het jaar'
@@ -80,6 +83,7 @@ nl:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

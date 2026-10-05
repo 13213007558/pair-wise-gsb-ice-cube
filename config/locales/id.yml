@@ -14,6 +14,9 @@ id:
     days_of_month:
       other: 'hari ke %{segments} dalam satu bulan'
       one: 'hari ke %{segments} dalam satu bulan'
+    business_days_of_month:
+      other: 'hari kerja ke %{segments} dalam satu bulan'
+      one: 'hari kerja ke %{segments} dalam satu bulan'
     days_of_year:
       other: 'hari ke %{segments} dalam satu tahun'
       one: 'hari ke %{segments} dalam satu tahun'
@@ -81,6 +84,7 @@ id:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

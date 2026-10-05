@@ -36,6 +36,9 @@ pt-BR:
     days_of_month:
       other: '%{segments} dias do mês'
       one: '%{segments} dia'
+    business_days_of_month:
+      other: '%{segments} dias úteis do mês'
+      one: '%{segments} dia útil do mês'
     days_of_year:
       other: '%{segments} dias do ano'
       one: '%{segments} dia'
@@ -108,6 +111,7 @@ pt-BR:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

@@ -36,6 +36,9 @@ it:
     days_of_month:
       one: '%{segments} giorno del mese'
       other: '%{segments} giorni del mese'
+    business_days_of_month:
+      one: '%{segments} giorno lavorativo del mese'
+      other: '%{segments} giorni lavorativi del mese'
     days_of_year:
       one: "%{segments} giorno dell'anno"
       other: "%{segments} giorni dell'anno"
@@ -108,6 +111,7 @@ it:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

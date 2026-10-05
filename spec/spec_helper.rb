@@ -46,6 +46,7 @@ RSpec.configure do |config|
   config.include WarningHelpers
 
   config.before :each do |example|
+    IceCube::BusinessCalendar.reset!
     if example.metadata[:requires_active_support]
       raise "ActiveSupport required but not present" unless defined?(ActiveSupport)
     end

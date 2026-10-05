@@ -36,6 +36,9 @@ fr:
     days_of_month:
       other: '%{segments} jours du mois'
       one: '%{segments} jours du mois'
+    business_days_of_month:
+      other: '%{segments} jours ouvrés du mois'
+      one: '%{segments} jour ouvré du mois'
     days_of_year:
       other: "%{segments} jours de l'année"
       one: "%{segments} jours de l'année"
@@ -103,6 +106,7 @@ fr:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

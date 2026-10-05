@@ -14,6 +14,9 @@ ja:
     days_of_month:
       other: '%{segments}日'
       one: '%{segments}日'
+    business_days_of_month:
+      other: '%{segments}営業日'
+      one: '%{segments}営業日'
     days_of_year:
       other: '%{segments}日'
       one: '%{segments}日'
@@ -77,6 +80,7 @@ ja:
         day: '%{rest}%{current}'
         day_of_week: '%{rest}%{current}'
         day_of_month: '%{rest}%{current}'
+        business_day_of_month: '%{rest}%{current}'
         day_of_year: '%{rest}%{current}'
         hour_of_day: '%{rest}%{current}'
         minute_of_hour: '%{rest}%{current}'

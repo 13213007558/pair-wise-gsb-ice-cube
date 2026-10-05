@@ -38,6 +38,9 @@ ru:
     days_of_month:
       other: '%{segments} день месяца'
       many: '%{segments} день месяца'
+    business_days_of_month:
+      other: '%{segments} рабочий день месяца'
+      many: '%{segments} рабочие дни месяца'
       few: '%{segments} день месяца'
       one: '%{segments} день месяца'
     days_of_year:
@@ -125,6 +128,7 @@ ru:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

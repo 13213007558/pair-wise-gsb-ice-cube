@@ -4,6 +4,7 @@ module IceCube
     include Validations::MinuteOfHour
     include Validations::SecondOfMinute
     include Validations::DayOfMonth
+    include Validations::BusinessDayOfMonth
     include Validations::DayOfWeek
     include Validations::Day
     include Validations::MonthOfYear
