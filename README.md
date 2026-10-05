@@ -214,6 +214,43 @@ schedule.add_recurrence_rule IceCube::Rule.monthly(2).day_of_month(15)
 Monthly rules will skip months that are too short for the specified day of
 month (e.g. no occurrences in February for `day_of_month(31)`).
 
+### Monthly (by business day of month)
+
+`business_day_of_month` selects business days using a calendar supplied by
+the caller. It accepts positive ordinals (counted from the start of the
+month), negative ordinals (counted from the end) and several ordinals at
+once. Business days are filtered first and counted afterwards, so a Sunday
+make-up workday is included and a weekday holiday is excluded. Unlike a
+weekday rule, it is never expanded into weekdays with holidays removed
+afterwards.
+
+```ruby
+require "date"
+
+calendar = IceCube::BusinessCalendar.new(
+  version: "zh-cn-2024",
+  holidays: [Date.new(2024, 5, 1)],
+  working_weekends: [Date.new(2024, 5, 5)] # Sunday make-up workday
+)
+IceCube.register_calendar(calendar)
+
+# every month on the second to last business day (and on the first)
+schedule.add_recurrence_rule(
+  IceCube::Rule.monthly.business_day_of_month(1, -2, calendar: calendar)
+)
+```
+
+Months without enough business days for an ordinal are skipped entirely;
+occurrences are never borrowed from the following month. Any object that
+responds to `#business_day?(date)` and `#version` can be used as a
+calendar.
+
+The calendar `version` is embedded in the serialized rule. Before calling
+`Rule.from_yaml`, `Rule.from_hash` or `Schedule.from_yaml`, register the
+matching calendar with `IceCube.register_calendar`. Deserialization raises
+`IceCube::CalendarVersionNotFound` when the version is not registered.
+Business-day rules cannot be exported to iCalendar.
+
 ### Monthly (by day of Nth week)
 
 ```ruby

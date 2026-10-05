@@ -98,7 +98,18 @@ module IceCube
           raise ArgumentError, "Invalid rule validation type: #{name}"
         end
 
-        args.is_a?(Array) ? rule.send(name, *args) : rule.send(name, args)
+        if name == :business_day_of_month
+          entries = Array(args)
+          entries.each do |entry|
+            ordinal, version = entry
+            calendar = IceCube.calendar_for_version(version)
+            rule.business_day_of_month(ordinal, calendar: calendar)
+          end
+        elsif args.is_a?(Array)
+          rule.send(name, *args)
+        else
+          rule.send(name, args)
+        end
       end
     end
 

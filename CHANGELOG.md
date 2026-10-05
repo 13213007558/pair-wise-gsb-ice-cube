@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [UNRELEASED]
 ### Added
 - Support for BYSETPOS with all rule frequencies (yearly, monthly, weekly, daily, hourly, minutely, secondly). ([#449](https://github.com/ice-cube-ruby/ice_cube/pull/449)) by [@nehresma](https://github.com/nehresma) and [@NicolasMarlier](https://github.com/NicolasMarlier)
+- `business_day_of_month` monthly rule, selecting the nth (positive, negative or multiple) business day of the month from a caller-provided calendar (with weekend make-up days and holidays). Months with too few business days are skipped rather than borrowing from the next month, and the calendar is bound to a serializable version that must be registered (`IceCube.register_calendar`) before deserialization.
 
 ### Changed
 - Updated CI test matrix to support Rails 7.2, 8.0, 8.1 and Ruby 3.2, 3.3, 3.4, 4.0. ([#565](https://github.com/ice-cube-ruby/ice_cube/pull/565)) by [@nehresma](https://github.com/nehresma) and [@pacso](https://github.com/pacso)

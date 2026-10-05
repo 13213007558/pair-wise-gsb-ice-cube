@@ -14,6 +14,9 @@ en:
     days_of_month:
       other: '%{segments} days of the month'
       one: '%{segments} day of the month'
+    business_days_of_month:
+      other: '%{segments} business days of the month'
+      one: '%{segments} business day of the month'
     days_of_year:
       other: '%{segments} days of the year'
       one: '%{segments} day of the year'
@@ -86,6 +89,7 @@ en:
         day: '%{rest} %{current}'
         day_of_week: '%{rest} %{current}'
         day_of_month: '%{rest} %{current}'
+        business_day_of_month: '%{rest} %{current}'
         day_of_year: '%{rest} %{current}'
         hour_of_day: '%{rest} %{current}'
         minute_of_hour: '%{rest} %{current}'

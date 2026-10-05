@@ -23,6 +23,9 @@ module IceCube
 
   autoload :CountExceeded, "ice_cube/errors/count_exceeded"
   autoload :UntilExceeded, "ice_cube/errors/until_exceeded"
+  autoload :CalendarVersionNotFound, "ice_cube/errors/calendar_version_not_found"
+
+  require "ice_cube/calendar"
 
   autoload :ValidatedRule, "ice_cube/validated_rule"
   autoload :SingleOccurrenceRule, "ice_cube/single_occurrence_rule"
@@ -64,6 +67,7 @@ module IceCube
     autoload :MinuteOfHour, "ice_cube/validations/minute_of_hour"
     autoload :SecondOfMinute, "ice_cube/validations/second_of_minute"
     autoload :DayOfMonth, "ice_cube/validations/day_of_month"
+    autoload :BusinessDayOfMonth, "ice_cube/validations/business_day_of_month"
     autoload :DayOfWeek, "ice_cube/validations/day_of_week"
     autoload :Day, "ice_cube/validations/day"
     autoload :DayOfYear, "ice_cube/validations/day_of_year"
