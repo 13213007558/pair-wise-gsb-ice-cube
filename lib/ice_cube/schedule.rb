@@ -96,6 +96,12 @@ module IceCube
     end
     alias_method :rrules, :recurrence_rules
 
+    def simplify_recurrence_rules
+      IceCube::RuleSimplifier.simplify(recurrence_rules, dtstart: start_time)
+    end
+
+    alias_method :simplify, :simplify_recurrence_rules
+
     # Get the exception rules
     def exception_rules
       @all_exception_rules.reject { |r| r.is_a?(SingleOccurrenceRule) }

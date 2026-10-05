@@ -35,6 +35,14 @@ module IceCube
       IceCube::IcalParser.rule_from_ical(ical)
     end
 
+    def self.simplify(rule_or_rules, dtstart: nil)
+      IceCube::RuleSimplifier.simplify(rule_or_rules, dtstart: dtstart)
+    end
+
+    def simplify(dtstart: nil)
+      IceCube::RuleSimplifier.simplify(self, dtstart: dtstart)
+    end
+
     # Yaml implementation
     def to_yaml(*args)
       YAML.dump(to_hash, *args)

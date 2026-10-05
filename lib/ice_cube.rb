@@ -10,6 +10,7 @@ module IceCube
   require "ice_cube/i18n"
 
   autoload :Rule, "ice_cube/rule"
+  autoload :RuleSimplifier, "ice_cube/rule_simplifier"
   autoload :Schedule, "ice_cube/schedule"
   autoload :Occurrence, "ice_cube/occurrence"
 
